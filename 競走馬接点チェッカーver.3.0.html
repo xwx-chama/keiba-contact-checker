@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>競走馬接点チェッカー</title>
+  <!-- Ver3.0: PNG出力から先着回数を削除 -->
+  <style>
+    :root {
+      --main: #4caf50;
+      --main-dark: #2e7d32;
+      --main-light: #e7f5e8;
+      --blue: #2677d8;
+      --text: #333;
+      --muted: #777;
+      --line: #ddd;
+      --bg: #f5fbf2;
+      --card: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Hiragino Sans",
+        "Yu Gothic",
+        "YuGothic",
+        sans-serif;
+      line-height: 1.75;
+    }
+
+    main {
+      width: min(100% - 32px, 680px);
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: var(--main-dark);
+      text-align: center;
+      font-size: clamp(28px, 7vw, 42px);
+      letter-spacing: 0.04em;
+    }
+
+    h2 {
+      margin: 36px 0 12px;
+      color: var(--main-dark);
+      text-align: center;
+      font-size: 22px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    .lead {
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .notice {
+      margin: 18px 0;
+      padding: 14px 16px;
+      border: 1px dashed var(--main);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .link {
+      color: var(--blue);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .howto {
+      padding: 28px 18px 24px;
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: 0 4px 18px rgba(46, 125, 50, 0.12);
+    }
+
+    .howto h2 {
+      margin: 0 0 18px;
+    }
+
+    .howto ol {
+      margin: 0;
+      padding-left: 1.4em;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0 0.35em;
+      border-radius: 5px;
+      background: var(--main-light);
+      color: var(--main-dark);
+      font-weight: 800;
+    }
+
+
+
+    .form-block {
+      margin-top: 28px;
+      padding: 28px 18px 24px;
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: 0 4px 18px rgba(46, 125, 50, 0.12);
+    }
+
+    .form-block h2 {
+      margin: 0 0 18px;
+    }
+
+    label {
+      display: block;
+      margin: 18px 0 6px;
+      font-weight: 800;
+    }
+
+    input[type="text"],
+    textarea {
+      display: block;
+      width: 100%;
+      border: 1px solid #b7d7b9;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input[type="text"] {
+      padding: 10px 12px;
+    }
+
+    textarea {
+      min-height: 170px;
+      padding: 10px 12px;
+      resize: vertical;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      margin-top: 22px;
+      text-align: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .check-button {
+      padding: 12px 42px;
+      background: var(--main);
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 5px 0 var(--main-dark);
+    }
+
+    .check-button:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 var(--main-dark);
+    }
+
+    .reset-button {
+      padding: 10px 22px;
+      border: 1px solid #b8b8b8;
+      background: #fff;
+      color: #555;
+      font-size: 15px;
+      box-shadow: 0 3px 0 #d0d0d0;
+    }
+
+    .reset-button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #d0d0d0;
+    }
+
+    .secondary-button {
+      padding: 9px 22px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #444;
+      font-size: 15px;
+    }
+
+    .result {
+      margin-top: 34px;
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: 0 4px 18px rgba(46, 125, 50, 0.12);
+    }
+
+    .result[hidden] {
+      display: none;
+    }
+
+    .pair-title {
+      margin: 0 0 4px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .count {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .timeline-title {
+      margin-top: 18px;
+      text-align: center;
+      color: var(--main-dark);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .race-card {
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .race-card:first-of-type {
+      border-top: none;
+    }
+
+    .race-date,
+    .race-name {
+      font-weight: 900;
+    }
+
+    .horse-result {
+      margin-top: 12px;
+    }
+
+    .horse-name {
+      font-weight: 700;
+    }
+
+    .finish {
+      margin-top: -2px;
+    }
+
+    .stats {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .stats-title {
+      color: var(--main-dark);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .share-area {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .share-output {
+      margin-top: 16px;
+      overflow-x: auto;
+    }
+
+    .share-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .share-table th,
+    .share-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .share-table th {
+      background: var(--main-light);
+      font-weight: 900;
+    }
+
+
+    .share-card {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto 14px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      text-align: center;
+    }
+
+    .share-card-title {
+      margin: 0 0 6px;
+      color: var(--main-dark);
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.4;
+    }
+
+    .share-card-count {
+      margin-bottom: 12px;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .share-card-stats {
+      margin: 0 auto 14px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .save-button {
+      padding: 8px 18px;
+      border: 1px solid #9bbbe8;
+      background: #fff;
+      color: var(--blue);
+      font-size: 14px;
+      box-shadow: 0 3px 0 #d6e4f6;
+    }
+
+    .save-button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #d6e4f6;
+    }
+
+    .save-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .error {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #fff1f1;
+      color: #b00020;
+      font-weight: 700;
+    }
+
+    .empty {
+      margin-top: 18px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        width: min(100% - 22px, 680px);
+        padding-top: 22px;
+      }
+
+      .howto,
+      .form-block {
+        padding: 24px 15px 20px;
+      }
+
+      .result {
+        padding: 15px;
+      }
+
+      textarea {
+        min-height: 145px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>競走馬接点チェッカー</h1>
+
+    <p class="lead">「この2頭こんな接点あったんだ〜」を目的としたサイト。</p>
+
+    <div class="notice">
+      特定の馬のage・sageを目的としたツールではありません。論争には使わないでね！！<br>
+      ガバいですが大目に見てください。
+    </div>
+
+    <section class="howto">
+      <h2>☆やり方☆</h2>
+
+      <p class="center">
+        ↓すぐ使いたい人はこちら↓<br>
+        <a class="link" href="#input">[入力欄へジャンプ]</a>
+      </p>
+
+      <ol>
+        <li><span class="tag">PC版</span> netkeibaサイトで、調べたい馬の個別ページを開く。<br>（スマートフォンをご利用の場合は、URLの「sp.」を削除してPC版表示に切り替えてください。）</li>
+        <li>競走成績の表を、左上端から右下端までドラッグして表全体が青くなるように選択し、コピーする。</li>
+        <li>下の入力欄に、馬2頭分のデータを貼る。</li>
+        <li>馬名を入力して、CHECK! を押す。</li>
+      </ol>
+
+      <p class="hint">
+<br>
+        ※現在はPC版netkeibaからのコピペを推奨しています。<br>
+        ※当サイト側からnetkeibaのデータ取得は行いません。貼り付けたデータは保存されません。<br>
+        ※海外馬などの場合、netkeiba上の掲載レース数の違いにより、実際の接点をすべて検出できない場合があります。
+</p>
+    </section>
+
+    <section id="input" class="form-block">
+      <h2>☆入力☆</h2>
+
+      <label for="horseAName">馬Aの名前</label>
+      <input id="horseAName" type="text" placeholder="ここに馬名を記入">
+
+      <label for="horseAText">馬Aの競走成績コピペ</label>
+      <textarea id="horseAText" placeholder="ここにPC版netkeibaの競走成績を貼り付け"></textarea>
+
+      <label for="horseBName">馬Bの名前</label>
+      <input id="horseBName" type="text" placeholder="ここに馬名を記入">
+
+      <label for="horseBText">馬Bの競走成績コピペ</label>
+      <textarea id="horseBText" placeholder="ここにPC版netkeibaの競走成績を貼り付け"></textarea>
+
+      <div class="button-row">
+        <button class="check-button" type="button" id="checkButton">CHECK!</button>
+        <button class="reset-button" type="button" id="resetButton">入力リセット</button>
+      </div>
+
+      <div id="message"></div>
+    </section>
+
+    <section id="result" class="result" hidden>
+      <div id="resultInner"></div>
+    </section>
+
+    <footer class="footer">
+      <h2>☆お問い合わせ☆</h2>
+      <p>
+        不具合報告・要望はこちら<br>
+        <a class="link" href="https://marshmallow-qa.com/
+id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
+      </p>
+     <p class="hint">
+  作成：roq<br>
+  ※当サイトはnetkeiba公式とは無関係の個人制作ツールです。
+</p>
+    </footer>
+  </main>
+
+  <script>
+    const raceNameAliases = new Map([
+      ["東京大賞典競走", "東京大賞典"],
+      ["大井記念競走", "大井記念"]
+    ]);
+
+    let latestCommonRaces = [];
+    let latestHorseAName = "";
+    let latestHorseBName = "";
+
+    const $ = (id) => document.getElementById(id);
+
+    $("checkButton").addEventListener("click", runCheck);
+    $("resetButton").addEventListener("click", resetForm);
+
+    function runCheck() {
+      clearMessage();
+
+      const horseAName = $("horseAName").value.trim() || "馬A";
+      const horseBName = $("horseBName").value.trim() || "馬B";
+      const horseAText = $("horseAText").value;
+      const horseBText = $("horseBText").value;
+
+      const racesA = parseNetkeibaTsv(horseAText, horseAName);
+      const racesB = parseNetkeibaTsv(horseBText, horseBName);
+
+      if (racesA.length === 0 || racesB.length === 0) {
+        showError("レース行を読み取れませんでした。PC版netkeibaの競走成績表をコピーして貼り付けてください。");
+        $("result").hidden = true;
+        return;
+      }
+
+      const commonRaces = findCommonRaces(racesA, racesB);
+
+      latestCommonRaces = commonRaces;
+      latestHorseAName = horseAName;
+      latestHorseBName = horseBName;
+
+      renderResult(horseAName, horseBName, commonRaces);
+    }
+
+    function resetForm() {
+      $("horseAName").value = "";
+      $("horseAText").value = "";
+      $("horseBName").value = "";
+      $("horseBText").value = "";
+      $("message").innerHTML = "";
+      $("result").hidden = true;
+      $("resultInner").innerHTML = "";
+      latestCommonRaces = [];
+      latestHorseAName = "";
+      latestHorseBName = "";
+      $("horseAName").focus();
+    }
+
+    function parseNetkeibaTsv(text, horseName) {
+      return text
+        .split(/\r?\n/)
+        .filter(line => /^\d{4}\/\d{2}\/\d{2}\t/.test(line))
+        .map(line => {
+          const cols = line.split("\t");
+
+          const date = clean(cols[0]);
+          const place = clean(cols[1]);
+          const raceNo = clean(cols[3]);
+          const raceNameOriginal = clean(cols[4]);
+          const popularity = clean(cols[10]);
+          const finish = clean(cols[11]);
+
+          const raceNameDisplay = normalizeDisplayRaceName(raceNameOriginal);
+          const raceNameKey = normalizeRaceNameForKey(raceNameOriginal);
+
+          return {
+            horseName,
+            date,
+            place,
+            raceNo,
+            raceNameOriginal,
+            raceNameDisplay,
+            raceNameKey,
+            key: makeRaceKey(date, raceNameKey),
+            popularity,
+            finish
+          };
+        })
+        .filter(race => race.date && race.raceNameKey);
+    }
+
+    function clean(value) {
+      return (value ?? "").replace(/\u00a0/g, " ").trim();
+    }
+
+    function normalizeDisplayRaceName(name) {
+      return clean(name)
+        .normalize("NFKC")
+        .replace(/\(/g, "（")
+        .replace(/\)/g, "）");
+    }
+
+    function normalizeRaceNameForKey(name) {
+      let normalized = clean(name)
+        .normalize("NFKC")
+        .replace(/\s+/g, "")
+        .replace(/（[^）]*）/g, "")
+        .replace(/\([^)]*\)/g, "");
+
+      if (raceNameAliases.has(normalized)) {
+        normalized = raceNameAliases.get(normalized);
+      }
+
+      return normalized;
+    }
+
+    function makeRaceKey(date, raceNameKey) {
+      return `${date}_${raceNameKey}`;
+    }
+
+    function findCommonRaces(racesA, racesB) {
+      const mapB = new Map();
+      for (const race of racesB) {
+        mapB.set(race.key, race);
+      }
+
+      return racesA
+        .filter(raceA => mapB.has(raceA.key))
+        .map(raceA => {
+          const raceB = mapB.get(raceA.key);
+          return {
+            date: raceA.date,
+            place: raceA.place || raceB.place,
+            raceNo: raceA.raceNo || raceB.raceNo,
+            raceName: raceA.raceNameDisplay || raceB.raceNameDisplay,
+            horseA: raceA,
+            horseB: raceB
+          };
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function renderResult(horseAName, horseBName, commonRaces) {
+      const result = $("result");
+      const inner = $("resultInner");
+
+      if (commonRaces.length === 0) {
+        inner.innerHTML = `
+          <p class="pair-title">${escapeHtml(horseAName)} & ${escapeHtml(horseBName)}</p>
+          <p class="count">共通出走　0回</p>
+          <p class="empty">共通出走レースは見つかりませんでした。</p>
+        `;
+        result.hidden = false;
+        return;
+      }
+
+      const timelineHtml = commonRaces.map(race => `
+        <article class="race-card">
+          <div class="race-date">${escapeHtml(race.date)}</div>
+          <div class="race-name">${escapeHtml(race.raceName)}</div>
+
+          <div class="horse-result">
+            <div class="horse-name">${escapeHtml(horseAName)}</div>
+            <div class="finish">${formatResult(race.horseA)}</div>
+          </div>
+
+          <div class="horse-result">
+            <div class="horse-name">${escapeHtml(horseBName)}</div>
+            <div class="finish">${formatResult(race.horseB)}</div>
+          </div>
+        </article>
+      `).join("");
+
+      const stats = countAhead(commonRaces);
+
+      inner.innerHTML = `
+        <p class="pair-title">${escapeHtml(horseAName)} & ${escapeHtml(horseBName)}</p>
+        <p class="count">共通出走　${commonRaces.length}回</p>
+
+        <div class="timeline-title">年表</div>
+        ${timelineHtml}
+
+        <section class="stats">
+          <div class="stats-title">先着回数</div>
+          <div>${escapeHtml(horseAName)}　${stats.a}回</div>
+          <div>${escapeHtml(horseBName)}　${stats.b}回</div>
+          ${stats.unknown ? `<div class="hint">※中止・取消など判定できないレース：${stats.unknown}件</div>` : ""}
+        </section>
+
+        <section class="share-area">
+          <button class="secondary-button" type="button" id="makeShareButton">共有用画像を作成</button>
+          <div id="shareOutput" class="share-output" hidden></div>
+        </section>
+      `;
+
+      result.hidden = false;
+
+      $("makeShareButton").addEventListener("click", () => {
+        renderShareTable(horseAName, horseBName, commonRaces);
+      });
+    }
+
+    function formatResult(race) {
+      const finish = formatFinish(race.finish);
+      const popularity = race.popularity ? `（${escapeHtml(race.popularity)}人気）` : "";
+      return `${finish}${popularity}`;
+    }
+
+    function formatFinish(value) {
+      const v = clean(value).normalize("NFKC");
+
+      if (!v) return "着順不明";
+      if (/^\d+$/.test(v)) return `${escapeHtml(v)}着`;
+
+      const special = {
+        "中": "中止",
+        "取": "取消",
+        "除": "除外",
+        "失": "失格",
+        "降": "降着"
+      };
+
+      return special[v] || escapeHtml(v);
+    }
+
+    function countAhead(commonRaces) {
+      let a = 0;
+      let b = 0;
+      let unknown = 0;
+
+      for (const race of commonRaces) {
+        const finishA = parseFinishNumber(race.horseA.finish);
+        const finishB = parseFinishNumber(race.horseB.finish);
+
+        if (finishA === null || finishB === null || finishA === finishB) {
+          unknown++;
+        } else if (finishA < finishB) {
+          a++;
+        } else {
+          b++;
+        }
+      }
+
+      return { a, b, unknown };
+    }
+
+    function parseFinishNumber(value) {
+      const normalized = clean(value).normalize("NFKC");
+      if (!/^\d+$/.test(normalized)) {
+        return null;
+      }
+      return Number(normalized);
+    }
+
+    function renderShareTable(horseAName, horseBName, commonRaces) {
+      const output = $("shareOutput");
+
+      const rows = commonRaces.map(race => `
+        <tr>
+          <td>${escapeHtml(formatMonth(race.date))}</td>
+          <td>${escapeHtml(race.raceName)}</td>
+          <td>${formatFinishForTable(race.horseA.finish)}</td>
+          <td>${formatFinishForTable(race.horseB.finish)}</td>
+        </tr>
+      `).join("");
+
+      output.innerHTML = `
+        <div class="share-card" id="shareCard">
+          <div class="share-card-title">${escapeHtml(horseAName)} & ${escapeHtml(horseBName)}</div>
+          <div class="share-card-count">共通出走　${commonRaces.length}回</div>
+
+          <table class="share-table">
+            <thead>
+              <tr>
+                <th>年月</th>
+                <th>レース名</th>
+                <th>${escapeHtml(horseAName)}</th>
+                <th>${escapeHtml(horseBName)}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+
+        <button class="save-button" type="button" id="savePngButton">PNGで保存</button>
+        <div id="pngPreview" class="share-output" hidden></div>
+      `;
+
+      output.hidden = false;
+
+      $("savePngButton").addEventListener("click", () => {
+        saveSharePng(horseAName, horseBName, commonRaces);
+      });
+    }
+
+    function formatFinishForTable(value) {
+      const formatted = formatFinish(value);
+      return formatted === "着順不明" ? "-" : formatted;
+    }
+
+    function saveSharePng(horseAName, horseBName, commonRaces) {
+      const scale = 2;
+      const padding = 42;
+      const tableFont = 18;
+      const smallFont = 16;
+      const titleFont = 28;
+      const rowHeight = 42;
+      const headerHeight = 46;
+      const colWidths = [120, 270, 170, 170];
+      const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+      const width = tableWidth + padding * 2;
+
+      const topHeight = 96;
+      const height = padding + topHeight + headerHeight + rowHeight * commonRaces.length + padding;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = "#2e7d32";
+      ctx.font = `900 ${titleFont}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText(`${horseAName} & ${horseBName}`, width / 2, padding);
+
+      ctx.fillStyle = "#333333";
+      ctx.font = `900 21px sans-serif`;
+      ctx.fillText(`共通出走　${commonRaces.length}回`, width / 2, padding + 42);
+
+      const tableX = padding;
+      const tableY = padding + topHeight;
+      drawShareTableOnCanvas(ctx, {
+        x: tableX,
+        y: tableY,
+        colWidths,
+        headerHeight,
+        rowHeight,
+        horseAName,
+        horseBName,
+        commonRaces
+      });
+
+      const fileName = makeSafeFileName(`競走馬接点チェッカー_${horseAName}_${horseBName}.png`);
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = dataUrl;
+      link.click();
+
+      showPngPreview(dataUrl);
+    }
+
+    function drawShareTableOnCanvas(ctx, options) {
+      const {
+        x,
+        y,
+        colWidths,
+        headerHeight,
+        rowHeight,
+        horseAName,
+        horseBName,
+        commonRaces
+      } = options;
+
+      const headers = ["年月", "レース名", horseAName, horseBName];
+      const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#d6d6d6";
+
+      ctx.fillStyle = "#e7f5e8";
+      ctx.fillRect(x, y, tableWidth, headerHeight);
+
+      let currentX = x;
+      ctx.fillStyle = "#333333";
+      ctx.font = "900 16px sans-serif";
+      headers.forEach((header, index) => {
+        ctx.strokeRect(currentX, y, colWidths[index], headerHeight);
+        drawWrappedText(ctx, header, currentX + colWidths[index] / 2, y + headerHeight / 2, colWidths[index] - 14, 16, 2);
+        currentX += colWidths[index];
+      });
+
+      ctx.font = "16px sans-serif";
+
+      commonRaces.forEach((race, rowIndex) => {
+        const rowY = y + headerHeight + rowHeight * rowIndex;
+        const cells = [
+          formatMonth(race.date),
+          race.raceName,
+          formatFinishForTable(race.horseA.finish),
+          formatFinishForTable(race.horseB.finish)
+        ];
+
+        currentX = x;
+        cells.forEach((cell, colIndex) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(currentX, rowY, colWidths[colIndex], rowHeight);
+          ctx.strokeStyle = "#d6d6d6";
+          ctx.strokeRect(currentX, rowY, colWidths[colIndex], rowHeight);
+
+          ctx.fillStyle = "#333333";
+          drawWrappedText(ctx, cell, currentX + colWidths[colIndex] / 2, rowY + rowHeight / 2, colWidths[colIndex] - 14, 16, 2);
+
+          currentX += colWidths[colIndex];
+        });
+      });
+    }
+
+    function drawWrappedText(ctx, text, centerX, centerY, maxWidth, lineHeight, maxLines) {
+      const chars = String(text ?? "").split("");
+      const lines = [];
+      let line = "";
+
+      for (const char of chars) {
+        const testLine = line + char;
+        if (ctx.measureText(testLine).width <= maxWidth || line === "") {
+          line = testLine;
+        } else {
+          lines.push(line);
+          line = char;
+        }
+
+        if (lines.length === maxLines) break;
+      }
+
+      if (line && lines.length < maxLines) {
+        lines.push(line);
+      }
+
+      if (chars.length > 0 && lines.length === maxLines) {
+        let joined = lines.join("");
+        if (joined.length < String(text).length) {
+          lines[maxLines - 1] = trimTextToWidth(ctx, lines[maxLines - 1] + "…", maxWidth);
+        }
+      }
+
+      const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+      lines.forEach((lineText, index) => {
+        ctx.fillText(lineText, centerX, startY + lineHeight * index);
+      });
+    }
+
+    function trimTextToWidth(ctx, text, maxWidth) {
+      let result = text;
+      while (result.length > 1 && ctx.measureText(result).width > maxWidth) {
+        result = result.slice(0, -2) + "…";
+      }
+      return result;
+    }
+
+    function showPngPreview(dataUrl) {
+      const preview = $("pngPreview");
+      preview.innerHTML = `
+        <p class="save-note">保存できない場合はこちらの画像を長押し/右クリックしてください。</p>
+        <img src="${dataUrl}" alt="共有用画像プレビュー" style="max-width:100%; border:1px solid var(--line); border-radius:10px; background:#fff;">
+      `;
+      preview.hidden = false;
+    }
+
+    function makeSafeFileName(name) {
+      return name.replace(/[\/:*?"<>|]/g, "_");
+    }
+
+    function formatMonth(date) {
+      const match = date.match(/^(\d{4})\/(\d{2})\/\d{2}$/);
+      if (!match) return date;
+      return `${match[1]}.${Number(match[2])}`;
+    }
+
+    function showError(text) {
+      $("message").innerHTML = `<div class="error">${escapeHtml(text)}</div>`;
+    }
+
+    function clearMessage() {
+      $("message").innerHTML = "";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
