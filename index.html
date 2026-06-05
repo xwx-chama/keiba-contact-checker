@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver5.0: コピー範囲参考画像を別ファイル化 -->
+  <!-- Ver5.1: 国内レース照合に開催・R数を追加 -->
   <style>
     :root {
       --main: #4caf50;
@@ -620,7 +620,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
             raceNameOriginal,
             raceNameDisplay,
             raceNameKey,
-            key: makeRaceKey(date, raceNameKey),
+            key: makeRaceKey(date, place, raceNo, raceNameKey),
             popularity,
             finish
           };
@@ -653,7 +653,14 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       return normalized;
     }
 
-    function makeRaceKey(date, raceNameKey) {
+    function makeRaceKey(date, place, raceNo, raceNameKey) {
+      const normalizedPlace = clean(place).normalize("NFKC");
+      const normalizedRaceNo = clean(raceNo).normalize("NFKC");
+
+      if (normalizedPlace && normalizedRaceNo) {
+        return `${date}_${normalizedPlace}_${normalizedRaceNo}R_${raceNameKey}`;
+      }
+
       return `${date}_${raceNameKey}`;
     }
 
