@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver3.0: PNG出力から先着回数を削除 -->
+  <!-- Ver5.0: コピー範囲参考画像を別ファイル化 -->
   <style>
     :root {
       --main: #4caf50;
@@ -106,6 +106,27 @@
     .howto ol {
       margin: 0;
       padding-left: 1.4em;
+    }
+
+
+    .copy-example {
+      margin: 12px 0 14px;
+    }
+
+    .copy-example summary {
+      color: var(--blue);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .copy-example img {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
     }
 
     .tag {
@@ -291,6 +312,21 @@
       font-weight: 900;
     }
 
+
+    .share-option {
+      display: block;
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .share-option input {
+      width: auto;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
     .share-area {
       margin-top: 24px;
       padding-top: 18px;
@@ -446,6 +482,14 @@
         <li>下の入力欄に、馬2頭分のデータを貼る。</li>
         <li>馬名を入力して、CHECK! を押す。</li>
       </ol>
+
+      <details class="copy-example">
+        <summary>コピー範囲の参考画像を見る</summary>
+        <img
+          src="copy-range.png"
+          alt="競走成績表のコピー範囲"
+        >
+      </details>
 
       <p class="hint">
 <br>
@@ -683,6 +727,10 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         </section>
 
         <section class="share-area">
+          <label class="share-option">
+            <input type="checkbox" id="showPopularityInShare" checked>
+            共有用画像に人気を表示する
+          </label>
           <button class="secondary-button" type="button" id="makeShareButton">共有用画像を作成</button>
           <div id="shareOutput" class="share-output" hidden></div>
         </section>
@@ -754,8 +802,8 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         <tr>
           <td>${escapeHtml(formatMonth(race.date))}</td>
           <td>${escapeHtml(race.raceName)}</td>
-          <td>${formatFinishForTable(race.horseA.finish)}</td>
-          <td>${formatFinishForTable(race.horseB.finish)}</td>
+          <td>${formatResultForShare(race.horseA)}</td>
+          <td>${formatResultForShare(race.horseB)}</td>
         </tr>
       `).join("");
 
@@ -795,6 +843,16 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       return formatted === "着順不明" ? "-" : formatted;
     }
 
+    function formatResultForShare(race) {
+      const finish = formatFinishForTable(race.finish);
+      const showPopularity = $("showPopularityInShare")?.checked;
+
+      if (!showPopularity) return finish;
+
+      const popularity = race.popularity ? `（${escapeHtml(race.popularity)}人気）` : "";
+      return `${finish}${popularity}`;
+    }
+
     function saveSharePng(horseAName, horseBName, commonRaces) {
       const scale = 2;
       const padding = 42;
@@ -803,7 +861,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       const titleFont = 28;
       const rowHeight = 42;
       const headerHeight = 46;
-      const colWidths = [120, 270, 170, 170];
+      const colWidths = [120, 250, 180, 180];
       const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
       const width = tableWidth + padding * 2;
 
@@ -893,8 +951,8 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         const cells = [
           formatMonth(race.date),
           race.raceName,
-          formatFinishForTable(race.horseA.finish),
-          formatFinishForTable(race.horseB.finish)
+          formatResultForShare(race.horseA),
+          formatResultForShare(race.horseB)
         ];
 
         currentX = x;
