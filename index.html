@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver5.1: 国内レース照合に開催・R数を追加 -->
+  <!-- Ver5.4: 共有用表の年月表示を日付表示に変更 -->
   <style>
     :root {
       --main: #4caf50;
@@ -803,7 +803,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
 
       const rows = commonRaces.map(race => `
         <tr>
-          <td>${escapeHtml(formatMonth(race.date))}</td>
+          <td>${escapeHtml(race.date)}</td>
           <td>${escapeHtml(race.raceName)}</td>
           <td>${formatResultForShare(race.horseA)}</td>
           <td>${formatResultForShare(race.horseB)}</td>
@@ -818,7 +818,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
           <table class="share-table">
             <thead>
               <tr>
-                <th>年月</th>
+                <th>日付</th>
                 <th>レース名</th>
                 <th>${escapeHtml(horseAName)}</th>
                 <th>${escapeHtml(horseBName)}</th>
@@ -927,7 +927,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         commonRaces
       } = options;
 
-      const headers = ["年月", "レース名", horseAName, horseBName];
+      const headers = ["日付", "レース名", horseAName, horseBName];
       const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
 
       ctx.textAlign = "center";
@@ -952,7 +952,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       commonRaces.forEach((race, rowIndex) => {
         const rowY = y + headerHeight + rowHeight * rowIndex;
         const cells = [
-          formatMonth(race.date),
+          race.date,
           race.raceName,
           formatResultForShare(race.horseA),
           formatResultForShare(race.horseB)
