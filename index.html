@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver5.4: 共有用表の年月表示を日付表示に変更 -->
+  <!-- Ver5.5: 先着回数に同着表示を追加 -->
   <style>
     :root {
       --main: #4caf50;
@@ -460,7 +460,7 @@
     <p class="lead">「この2頭こんな接点あったんだ〜」を目的としたサイト。</p>
 
     <div class="notice">
-      特定の馬のage・sageを目的としたツールではありません。論争には使わないでね！！<br>
+      特定の馬の過度なage・sageを目的としたツールではありません。論争には使わないでね！！<br>
       ガバいですが大目に見てください。
     </div>
 
@@ -726,6 +726,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
           <div class="stats-title">先着回数</div>
           <div>${escapeHtml(horseAName)}　${stats.a}回</div>
           <div>${escapeHtml(horseBName)}　${stats.b}回</div>
+          ${stats.tie ? `<div>同着　${stats.tie}回</div>` : ""}
           ${stats.unknown ? `<div class="hint">※中止・取消など判定できないレース：${stats.unknown}件</div>` : ""}
         </section>
 
@@ -772,14 +773,17 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
     function countAhead(commonRaces) {
       let a = 0;
       let b = 0;
+      let tie = 0;
       let unknown = 0;
 
       for (const race of commonRaces) {
         const finishA = parseFinishNumber(race.horseA.finish);
         const finishB = parseFinishNumber(race.horseB.finish);
 
-        if (finishA === null || finishB === null || finishA === finishB) {
+        if (finishA === null || finishB === null) {
           unknown++;
+        } else if (finishA === finishB) {
+          tie++;
         } else if (finishA < finishB) {
           a++;
         } else {
@@ -787,7 +791,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         }
       }
 
-      return { a, b, unknown };
+      return { a, b, tie, unknown };
     }
 
     function parseFinishNumber(value) {
