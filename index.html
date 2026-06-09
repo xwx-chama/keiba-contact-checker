@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver5.5: 先着回数に同着表示を追加 -->
+  <!-- Ver5.6: Firefoxのコピペ形式に対応 -->
   <style>
     :root {
       --main: #4caf50;
@@ -492,7 +492,6 @@
         ※現在はPC版netkeibaからのコピペにのみ対応しています。<br>
         ※当サイト側からnetkeibaのデータ取得は行いません。貼り付けたデータは保存されません。<br>
         ※海外馬などの場合、netkeiba上の掲載レース数の違いにより、実際の接点をすべて検出できない場合があります。<br>
-        ※Firefoxでは正常に動作しない可能性があります。その場合はChromeなどの別ブラウザでお試しください。
 </p>
     </section>
 
@@ -595,7 +594,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
     function parseNetkeibaTsv(text, horseName) {
       return text
         .split(/\r?\n/)
-        .filter(line => /^\d{4}\/\d{2}\/\d{2}\t/.test(line))
+        .filter(line => /^\d{4}\/\d{2}\/\d{2}\s*\t/.test(line))
         .map(line => {
           const cols = line.split("\t");
 
