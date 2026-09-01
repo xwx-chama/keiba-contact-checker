@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>競走馬接点チェッカー</title>
-  <!-- Ver5.6: Firefoxのコピペ形式に対応 -->
+  <!-- Ver6.0: netkeibaの複数行・無料版コピペ形式に対応 -->
   <style>
     :root {
       --main: #4caf50;
@@ -592,9 +592,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
     }
 
     function parseNetkeibaTsv(text, horseName) {
-      return text
-        .split(/\r?\n/)
-        .filter(line => /^\d{4}\/\d{2}\/\d{2}\s*\t/.test(line))
+      return rebuildNetkeibaRaceLines(text)
         .map(line => {
           const cols = line.split("\t");
 
@@ -602,8 +600,7 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
           const place = clean(cols[1]);
           const raceNo = clean(cols[3]);
           const raceNameOriginal = clean(cols[4]);
-          const popularity = clean(cols[10]);
-          const finish = clean(cols[11]);
+          const { popularity, finish } = extractPopularityAndFinish(cols);
 
           const raceNameDisplay = normalizeDisplayRaceName(raceNameOriginal);
           const raceNameKey = normalizeRaceNameForKey(raceNameOriginal);
@@ -622,6 +619,60 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
           };
         })
         .filter(race => race.date && race.raceNameKey);
+    }
+
+    // netkeibaの表は、映像セルなどの影響で1レースが複数行に
+    // 分かれてクリップボードへ入ることがある。次の日付行までを
+    // 1レースとして結合し、空の映像列も維持してから解析する。
+    function rebuildNetkeibaRaceLines(text) {
+      const dateLinePattern = /^\d{4}\/\d{2}\/\d{2}\s*\t/;
+      const races = [];
+      let current = null;
+
+      for (const rawLine of text.split(/\r?\n/)) {
+        const line = rawLine.replace(/&#x0*9;|&#9;/gi, "\t");
+
+        if (dateLinePattern.test(line)) {
+          if (current !== null) races.push(current);
+          current = line;
+        } else if (current !== null && line.trim()) {
+          current += "\t" + line;
+        }
+      }
+
+      if (current !== null) races.push(current);
+      return races;
+    }
+
+    // 映像セルの改行や有料項目の「**」によって列番号が変わっても、
+    // 「頭数・枠番・馬番・オッズ・人気・着順」の並びから値を特定する。
+    function extractPopularityAndFinish(cols) {
+      const values = cols.slice(5).map(clean).filter(Boolean);
+
+      for (let i = 0; i + 5 < values.length; i++) {
+        const fieldSize = Number(values[i]);
+        const frameNumber = Number(values[i + 1]);
+        const horseNumber = Number(values[i + 2]);
+        const odds = values[i + 3];
+
+        if (
+          Number.isInteger(fieldSize) && fieldSize >= 2 && fieldSize <= 30 &&
+          Number.isInteger(frameNumber) && frameNumber >= 1 && frameNumber <= 8 &&
+          Number.isInteger(horseNumber) && horseNumber >= 1 && horseNumber <= 30 &&
+          /^(?:\d+(?:\.\d+)?|[-*]+)$/.test(odds)
+        ) {
+          return {
+            popularity: values[i + 4],
+            finish: values[i + 5]
+          };
+        }
+      }
+
+      // 従来形式へのフォールバック。
+      return {
+        popularity: clean(cols[10]),
+        finish: clean(cols[11])
+      };
     }
 
     function clean(value) {
