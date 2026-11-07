@@ -348,6 +348,10 @@
       border: 1px solid #ddd;
       padding: 8px;
       text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .share-table td:first-child {
       white-space: nowrap;
     }
 
@@ -449,6 +453,31 @@
       textarea {
         min-height: 145px;
       }
+
+      .share-card {
+        padding: 12px 6px;
+      }
+
+      .share-card-title {
+        font-size: 17px;
+      }
+
+      .share-table {
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .share-table th,
+      .share-table td {
+        padding: 6px 3px;
+      }
+    }
+
+    .pair-title,
+    .share-card-title,
+    .horse-name,
+    .race-name {
+      overflow-wrap: anywhere;
     }
   </style>
 </head>
@@ -830,14 +859,15 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
             <input type="checkbox" id="showPopularityInShare" checked>
             共有用画像に人気を表示する
           </label>
-          <button class="secondary-button" type="button" id="makeShareButton">共有用画像を作成</button>
           <div id="shareOutput" class="share-output" hidden></div>
         </section>
       `;
 
       result.hidden = false;
 
-      $("makeShareButton").addEventListener("click", () => {
+      renderShareTable(horseAName, horseBName, commonRaces);
+
+      $("showPopularityInShare").addEventListener("change", () => {
         renderShareTable(horseAName, horseBName, commonRaces);
       });
     }
