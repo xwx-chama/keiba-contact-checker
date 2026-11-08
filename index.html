@@ -182,6 +182,41 @@
       font-size: 13px;
     }
 
+    .format-select {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 14px;
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .format-select-label {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .format-select label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .parse-status {
+      min-height: 1.2em;
+      margin-top: 4px;
+      color: var(--main-dark);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .parse-status.is-error {
+      color: #b00020;
+    }
+
     .button-row {
       display: flex;
       flex-wrap: wrap;
@@ -531,13 +566,29 @@
       <input id="horseAName" type="text" placeholder="ここに馬名を記入">
 
       <label for="horseAText">馬Aの競走成績コピペ</label>
+      <div class="format-select" role="radiogroup" aria-label="馬Aのコピー元">
+        <span class="format-select-label">コピー元：</span>
+        <label><input type="radio" name="horseAFormat" value="auto" checked>自動判定</label>
+        <label><input type="radio" name="horseAFormat" value="pc">PC版</label>
+        <label><input type="radio" name="horseAFormat" value="sp">スマホ版</label>
+      </div>
       <textarea id="horseAText" placeholder="ここにnetkeibaの競走成績を貼り付け（PC版・スマホ版対応）"></textarea>
+      <div id="horseAStatus" class="parse-status"></div>
 
       <label for="horseBName">馬Bの名前</label>
       <input id="horseBName" type="text" placeholder="ここに馬名を記入">
 
       <label for="horseBText">馬Bの競走成績コピペ</label>
+      <div class="format-select" role="radiogroup" aria-label="馬Bのコピー元">
+        <span class="format-select-label">コピー元：</span>
+        <label><input type="radio" name="horseBFormat" value="auto" checked>自動判定</label>
+        <label><input type="radio" name="horseBFormat" value="pc">PC版</label>
+        <label><input type="radio" name="horseBFormat" value="sp">スマホ版</label>
+      </div>
       <textarea id="horseBText" placeholder="ここにnetkeibaの競走成績を貼り付け（PC版・スマホ版対応）"></textarea>
+      <div id="horseBStatus" class="parse-status"></div>
+
+      <p class="hint">※うまく読み取れないときは、「コピー元」をPC版／スマホ版に切り替えてお試しください。</p>
 
       <div class="button-row">
         <button class="check-button" type="button" id="checkButton">CHECK!</button>
@@ -588,11 +639,19 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       const horseAText = $("horseAText").value;
       const horseBText = $("horseBText").value;
 
-      const racesA = parseNetkeibaTsv(horseAText, horseAName);
-      const racesB = parseNetkeibaTsv(horseBText, horseBName);
+      const formatA = getSelectedFormat("horseAFormat");
+      const formatB = getSelectedFormat("horseBFormat");
+
+      const parsedA = parseNetkeibaTsv(horseAText, horseAName, formatA);
+      const parsedB = parseNetkeibaTsv(horseBText, horseBName, formatB);
+      const racesA = parsedA.races;
+      const racesB = parsedB.races;
+
+      showParseStatus("horseAStatus", parsedA, formatA);
+      showParseStatus("horseBStatus", parsedB, formatB);
 
       if (racesA.length === 0 || racesB.length === 0) {
-        showError("レース行を読み取れませんでした。netkeiba（PC版またはスマホ版）の競走成績表をコピーして貼り付けてください。");
+        showError("レース行を読み取れませんでした。netkeiba（PC版またはスマホ版）の競走成績表をコピーして貼り付けてください。うまくいかない場合は「コピー元」を切り替えてお試しください。");
         $("result").hidden = true;
         return;
       }
@@ -612,6 +671,10 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       $("horseBName").value = "";
       $("horseBText").value = "";
       $("message").innerHTML = "";
+      setParseStatus("horseAStatus", "", false);
+      setParseStatus("horseBStatus", "", false);
+      document.querySelectorAll('input[name="horseAFormat"][value="auto"], input[name="horseBFormat"][value="auto"]')
+        .forEach(input => { input.checked = true; });
       $("result").hidden = true;
       $("resultInner").innerHTML = "";
       latestCommonRaces = [];
@@ -620,13 +683,64 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       $("horseAName").focus();
     }
 
-    // PC版・スマホ版の両方を読み取り、重複を除いて返す
-    function parseNetkeibaTsv(text, horseName) {
+    function getSelectedFormat(name) {
+      return document.querySelector(`input[name="${name}"]:checked`)?.value || "auto";
+    }
+
+    function showParseStatus(id, parsed, selectedFormat) {
+      const formatLabel = { pc: "PC版", sp: "スマホ版" };
+
+      if (!parsed.races.length) {
+        const tried = selectedFormat === "auto" ? "" : `（${formatLabel[selectedFormat]}として）`;
+        setParseStatus(id, `読み取れませんでした${tried}`, true);
+        return;
+      }
+
+      const how = selectedFormat === "auto" ? "自動判定" : "手動指定";
+      const unknown = parsed.races.filter(race => !race.finish).length;
+      const unknownText = unknown ? `／着順を読めなかったレース：${unknown}件` : "";
+      setParseStatus(
+        id,
+        `${formatLabel[parsed.format]}として${parsed.races.length}レース読み取りました（${how}）${unknownText}`,
+        unknown > 0
+      );
+    }
+
+    function setParseStatus(id, text, isError) {
+      const el = $(id);
+      el.textContent = text;
+      el.classList.toggle("is-error", Boolean(isError));
+    }
+
+    // format: "auto" | "pc" | "sp"
+    // 戻り値：{ races, format }（format は実際に読み取った形式 "pc" / "sp" / ""）
+    function parseNetkeibaTsv(text, horseName, format = "auto") {
       const lines = String(text ?? "").split(/\r?\n/);
-      const races = [...parsePcLines(lines), ...parseSpLines(lines)];
+
+      let rawRaces = [];
+      let usedFormat = "";
+
+      if (format === "pc") {
+        rawRaces = parsePcLines(lines);
+        usedFormat = "pc";
+      } else if (format === "sp") {
+        rawRaces = parseSpLines(lines);
+        usedFormat = "sp";
+      } else {
+        // 自動判定：両方で読んでみて、多く読めた方を採用
+        const pcRaces = parsePcLines(lines);
+        const spRaces = parseSpLines(lines);
+        if (pcRaces.length >= spRaces.length) {
+          rawRaces = pcRaces;
+          usedFormat = pcRaces.length ? "pc" : "";
+        } else {
+          rawRaces = spRaces;
+          usedFormat = "sp";
+        }
+      }
 
       const seen = new Set();
-      return races
+      const races = rawRaces
         .map(race => buildRace(horseName, race))
         .filter(race => race.date && race.raceNameKey)
         .filter(race => {
@@ -634,23 +748,62 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
           seen.add(race.key);
           return true;
         });
+
+      return { races, format: races.length ? usedFormat : "" };
     }
 
-    // PC版：1行＝1レースのタブ区切り（日付 開催 天気 R レース名 … 人気 着順 …）
+    // PC版：日付 開催 天気 R レース名 映像 頭数 枠番 馬番 オッズ 人気 着順 騎手 斤量 距離 …
+    // 「映像」や「馬場指数」などのセルの中に改行が入るため、1レースが複数行に分かれてコピーされることがある。
+    // → 日付行から次の日付行までを1レースとしてつなぎ直し、
+    //   「距離」列（芝1800／ダ2000／障3000 など）を目印に、その3つ前を着順・4つ前を人気として読む。
     function parsePcLines(lines) {
-      return lines
-        .filter(line => /^\s*\d{4}\/\d{2}\/\d{2}\s*\t/.test(line))
-        .map(line => {
-          const cols = line.split("\t");
-          return {
-            date: clean(cols[0]),
-            place: clean(cols[1]),
-            raceNo: clean(cols[3]),
-            raceName: clean(cols[4]),
-            popularity: clean(cols[10]),
-            finish: clean(cols[11])
-          };
-        });
+      const datePattern = /^\s*\d{4}\/\d{1,2}\/\d{1,2}\s*\t/;
+      const records = [];
+      let current = null;
+
+      for (const line of lines) {
+        if (datePattern.test(line)) {
+          if (current) records.push(current);
+          current = { first: line, rest: [] };
+        } else if (current) {
+          current.rest.push(line);
+        }
+      }
+      if (current) records.push(current);
+
+      return records.map(record => {
+        const headCols = record.first.split("\t");
+        const joined = [record.first, ...record.rest].join("");
+        const cols = joined.split("\t").map(col => clean(col).normalize("NFKC"));
+
+        let popularity = "";
+        let finish = "";
+
+        const distanceIndex = cols.findIndex((col, index) => index >= 5 && /^(芝|ダ|障)\s*\d{3,4}/.test(col));
+        if (distanceIndex >= 4) {
+          popularity = cols[distanceIndex - 4];
+          finish = cols[distanceIndex - 3];
+        } else if (headCols.length >= 12) {
+          // 距離列が見つからない場合は、旧来の「1行＝1レース」の列位置で読む
+          popularity = clean(headCols[10]);
+          finish = clean(headCols[11]);
+        }
+
+        return {
+          date: normalizePcDate(clean(headCols[0])),
+          place: clean(headCols[1]),
+          raceNo: clean(headCols[3]),
+          raceName: clean(headCols[4]),
+          popularity: isValidPopularity(popularity) ? popularity : "",
+          finish: isValidFinish(finish) ? finish : ""
+        };
+      });
+    }
+
+    function normalizePcDate(value) {
+      const match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+      if (!match) return value;
+      return `${match[1]}/${match[2].padStart(2, "0")}/${match[3].padStart(2, "0")}`;
     }
 
     // スマホ版：
@@ -734,6 +887,8 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
         raceNameDisplay,
         raceNameKey,
         key: makeRaceKey(race.date, race.place, race.raceNo, raceNameKey),
+        looseKey: `${race.date}_${normalizePlace(race.place)}`,
+        hasRaceNo: /^\d+$/.test(normalizeRaceNo(race.raceNo)),
         popularity: race.popularity,
         finish: race.finish
       };
@@ -764,17 +919,25 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
       return normalized;
     }
 
-    function makeRaceKey(date, place, raceNo, raceNameKey) {
-      // PC版「5東京8」とスマホ版「東京」を同じ扱いにするため、開催回・日次の数字や括弧書きを除く
-      const normalizedPlace = clean(place)
+    // PC版「5東京8」とスマホ版「東京」を同じ扱いにするため、開催回・日次の数字や括弧書きを除く
+    function normalizePlace(place) {
+      return clean(place)
         .normalize("NFKC")
         .replace(/\([^)]*\)/g, "")
         .replace(/\d+/g, "")
         .replace(/\s+/g, "");
-      const normalizedRaceNo = clean(raceNo)
+    }
+
+    function normalizeRaceNo(raceNo) {
+      return clean(raceNo)
         .normalize("NFKC")
         .replace(/R$/i, "")
         .replace(/^0+(?=\d)/, "");
+    }
+
+    function makeRaceKey(date, place, raceNo, raceNameKey) {
+      const normalizedPlace = normalizePlace(place);
+      const normalizedRaceNo = normalizeRaceNo(raceNo);
 
       // 同じ日・同じ競馬場・同じRなら同一レース（PC版とスマホ版でレース名表記が違っても一致させる）
       if (normalizedPlace && /^\d+$/.test(normalizedRaceNo)) {
@@ -786,14 +949,25 @@ id3qswj61u3tf07" target="_blank" rel="noopener">[マシュマロ]</a>
 
     function findCommonRaces(racesA, racesB) {
       const mapB = new Map();
+      const looseMapB = new Map();
       for (const race of racesB) {
         mapB.set(race.key, race);
+        if (!looseMapB.has(race.looseKey)) looseMapB.set(race.looseKey, []);
+        looseMapB.get(race.looseKey).push(race);
       }
 
+      // 完全一致がなければ、片方にR番号が無い場合（PC版の海外レースなど）に限り「日付＋競馬場」で照合
+      const findMatch = (raceA) => {
+        if (mapB.has(raceA.key)) return mapB.get(raceA.key);
+        const candidates = (looseMapB.get(raceA.looseKey) || [])
+          .filter(raceB => !raceA.hasRaceNo || !raceB.hasRaceNo);
+        return candidates.length === 1 ? candidates[0] : null;
+      };
+
       return racesA
-        .filter(raceA => mapB.has(raceA.key))
-        .map(raceA => {
-          const raceB = mapB.get(raceA.key);
+        .map(raceA => ({ raceA, raceB: findMatch(raceA) }))
+        .filter(pair => pair.raceB)
+        .map(({ raceA, raceB }) => {
           return {
             date: raceA.date,
             place: raceA.place || raceB.place,
