@@ -692,9 +692,12 @@
 
     .share-table thead th.col-focus { z-index: 3; background: #c8e6c9; color: var(--main-deep); }
 
-    .share-table tbody td.col-focus { background: #f1f8f1; font-weight: 800; }
+    .share-table tbody td.col-focus { background: #f1f8f1; }
 
     .share-table tbody tr:nth-child(even) > td.col-focus { background: #e6f2e6; }
+
+    /* 「1着を強調」：1着のマスを太字に（背景色は変えない） */
+    .share-table tbody tr:nth-child(n) > td.is-win { font-weight: 900; }
 
     .focus-row select { width: 100%; max-width: 100%; }
 
@@ -1211,6 +1214,7 @@
           minCount: state.minCount,
           focus: state.focus,
           showPopularity: shareShowPopularity,
+          highlightWin: shareHighlightWin,
           tableSize,
           title: state.customTitle || ""
         }
@@ -1268,6 +1272,7 @@
 
       // 表の表示設定を先に戻してから CHECK
       shareShowPopularity = Boolean(view.showPopularity);
+      shareHighlightWin = Boolean(view.highlightWin);
       tableSize = ["s", "m", "l"].includes(view.tableSize) ? view.tableSize : "m";
       tableFullscreen = false;
 
@@ -1335,8 +1340,9 @@
       state.customTitle = "";   // 新しくCHECKしたらタイトルは自動に戻す
 
       if (!keepView) {
-        // 人気表示：2頭なら通常版と同じく表示、3頭以上は表が広くなるので非表示から
-        shareShowPopularity = horses.length === 2;
+        // 人気表示：CHECKするたびに頭数で決め直す（3頭までは表示、4頭以上は表が広くなるので非表示から）
+        // 文字サイズはCHECKでは変えない（再読み込みで「中」に戻る）
+        shareShowPopularity = horses.length <= 3;
       }
 
       renderResult();
@@ -1480,8 +1486,9 @@
     }
 
     // スマホ版：日付・競馬場・R の行 → レース名 → (グレード) → 人気<TAB>着順<TAB>騎手…
+    // 海外レースなどで「R」が無い行（例：24/03/30 メイダン）も読み取る
     function parseSpLines(lines) {
-      const headerPattern = /^\s*(\d{2}|\d{4})\/(\d{1,2})\/(\d{1,2})\s+(.+?)\s+(\d{1,2})\s*R\s*$/i;
+      const headerPattern = /^\s*(\d{2}|\d{4})\/(\d{1,2})\/(\d{1,2})\s+(.+?)(?:\s+(\d{1,2})\s*R)?\s*$/i;
       const races = [];
       let current = null;
 
@@ -1493,7 +1500,7 @@
           current = {
             date: normalizeSpDate(header[1], header[2], header[3]),
             place: clean(header[4]),
-            raceNo: header[5],
+            raceNo: header[5] || "",
             raceName: "",
             popularity: "",
             finish: ""
@@ -1553,7 +1560,9 @@
         raceNameDisplay,
         raceNameKey,
         key: makeRaceKey(race.date, race.place, race.raceNo, raceNameKey),
-        looseKey: `${race.date}_${normalizePlace(race.place)}`,
+        // PC版は海外の競馬場名が途中で切れる（例：サンタアニタパー／スマホ版はサンタアニタパーク）ため、
+        // 「日付＋競馬場」での照合は競馬場名の先頭6文字で行う
+        looseKey: `${race.date}_${normalizePlace(race.place).slice(0, 6)}`,
         hasRaceNo: /^\d+$/.test(normalizeRaceNo(race.raceNo)),
         popularity: race.popularity,
         finish: race.finish
@@ -1603,8 +1612,24 @@
 
     /* ================= 複数頭の照合 ================= */
 
+    // 完全一致しなかったレースを「日付＋競馬場」で同じレースとみなしてよいか。
+    // 海外レースはPC版にR番号が無い（スマホ版にはある）ため、R番号では照合できないことがある。
+    //   ・両方にR番号がある → R番号が違えば別レース
+    //   ・どちらかにR番号が無い → 同じ日・同じ競馬場でも別レースのことがある
+    //     （例：同じ日のメイダンの UAEダービー と ドバイワールドC）ので、レース名が似ているときだけ同一とみなす
+    function canLooseMatch(race, group) {
+      if (race.hasRaceNo && group.hasRaceNo) return false;
+      return isSimilarRaceName(race.raceNameKey, group.raceNameKey);
+    }
+
+    // 表記ゆれ程度の違い（片方がもう片方を含む）なら同じレース名とみなす
+    function isSimilarRaceName(a, b) {
+      if (!a || !b) return false;
+      return a.includes(b) || b.includes(a);
+    }
+
     // 全馬のレースを「同一レース」ごとにまとめる。
-    // 完全一致がなければ、R番号が無い側がいる場合（PC版の海外レースなど）に限り「日付＋競馬場」で照合（ver.6.0 と同じ考え方）。
+    // 完全一致がなければ、canLooseMatch の条件で「日付＋競馬場」で照合。
     function groupCommonRaces(horses) {
       const groups = [];
       const byKey = new Map();
@@ -1616,7 +1641,7 @@
 
           if (!group || group.entries.has(horseIndex)) {
             const candidates = (byLoose.get(race.looseKey) || [])
-              .filter(g => !g.entries.has(horseIndex) && (!race.hasRaceNo || !g.hasRaceNo));
+              .filter(g => !g.entries.has(horseIndex) && canLooseMatch(race, g));
             group = candidates.length === 1 ? candidates[0] : null;
           }
 
@@ -1626,6 +1651,7 @@
               place: race.place,
               raceNo: race.raceNo,
               raceName: race.raceNameDisplay,
+              raceNameKey: race.raceNameKey,
               hasRaceNo: race.hasRaceNo,
               entries: new Map()
             };
@@ -1641,6 +1667,10 @@
             }
             if (!group.place && race.place) group.place = race.place;
             if (!group.raceName && race.raceNameDisplay) group.raceName = race.raceNameDisplay;
+            // 表示は情報の多いほうに：グレード付きのレース名（スマホ版はグレードが別行）
+            if (!/（[^）]*）$/.test(group.raceName) && /（[^）]*）$/.test(race.raceNameDisplay)) {
+              group.raceName = race.raceNameDisplay;
+            }
           }
 
           group.entries.set(horseIndex, race);
@@ -1946,9 +1976,15 @@
       renderShareTable(races, indexes, selectedCount);
     }
 
-    // 人気表示の初期値は CHECK 時に頭数で決める（2頭：表示／3頭以上：非表示）
+    // 人気表示の初期値は CHECK 時に頭数で決める（3頭まで：表示／4頭以上：非表示）
     let shareShowPopularity = true;
     let tableSize = "m";          // s / m / l
+    // 1着を強調（CHECKでは変えない。再読み込みでオフに戻る）
+    let shareHighlightWin = false;
+
+    function isWin(race) {
+      return parseFinishNumber(race.finish) === 1;
+    }
     let tableFullscreen = false;
 
     document.addEventListener("keydown", (event) => {
@@ -2130,7 +2166,9 @@
             </th>
             ${indexes.map(i => {
               const race = group.entries.get(i);
-              return race ? `<td class="${cellClass(i)}">${formatResultForShare(race)}</td>` : `<td class="is-none ${cellClass(i)}">—</td>`;
+              if (!race) return `<td class="is-none ${cellClass(i)}">—</td>`;
+              const win = shareHighlightWin && isWin(race) ? "is-win" : "";
+              return `<td class="${cellClass(i)} ${win}">${formatResultForShare(race)}</td>`;
             }).join("")}
           </tr>
         `;
@@ -2155,6 +2193,9 @@
           <div class="table-controls">
             <label class="share-option">
               <input type="checkbox" id="showPopularityInShare" ${shareShowPopularity ? "checked" : ""}>人気を表示
+            </label>
+            <label class="share-option">
+              <input type="checkbox" id="highlightWinInShare" ${shareHighlightWin ? "checked" : ""}>1着を強調
             </label>
             <span class="size-switch">文字<span class="size-switch-buttons" role="group" aria-label="表の文字サイズ">${sizeButtons}</span></span>
             <button type="button" class="mini-button fullscreen-button" id="fullscreenButton">${tableFullscreen ? "✕ 閉じる" : "⛶ 全画面"}</button>
@@ -2194,6 +2235,11 @@
 
       $("showPopularityInShare").addEventListener("change", (event) => {
         shareShowPopularity = event.target.checked;
+        renderShareTable(races, indexes, selectedCount);
+      });
+
+      $("highlightWinInShare").addEventListener("change", (event) => {
+        shareHighlightWin = event.target.checked;
         renderShareTable(races, indexes, selectedCount);
       });
 
@@ -2443,6 +2489,10 @@
             return race ? unescapeHtml(formatResultForShare(race)) : "—";
           })
         ];
+        // 1着を強調：馬の列（3列目以降）で1着のマス
+        const winCols = new Set(indexes
+          .map((i, k) => (shareHighlightWin && group.entries.get(i) && isWin(group.entries.get(i)) ? k + 2 : -1))
+          .filter(k => k >= 0));
 
         cx = x;
         cells.forEach((cell, colIndex) => {
@@ -2451,7 +2501,7 @@
           ctx.strokeStyle = "#d6d6d6";
           ctx.strokeRect(cx, rowY, colWidths[colIndex], rowHeight);
           ctx.fillStyle = cell === "—" && colIndex >= 2 ? "#bbbbbb" : "#333333";
-          ctx.font = isFocusCol(colIndex) ? "800 16px sans-serif" : "16px sans-serif";
+          ctx.font = winCols.has(colIndex) ? "900 16px sans-serif" : "16px sans-serif";
           drawWrappedText(ctx, cell, cx + colWidths[colIndex] / 2, rowY + rowHeight / 2, colWidths[colIndex] - 14, 16, 2);
           cx += colWidths[colIndex];
         });
