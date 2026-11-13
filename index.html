@@ -892,7 +892,7 @@
           <li>馬の並び替え（↑↓ ボタンか、左端の「⠿」をドラッグ。結果の表の列もこの順番になります）</li>
           <li>ペア別の共通出走回数の表（マスを押すと、その2頭だけの比較に切り替わります）</li>
           <li>表示する馬や「何頭以上が出走したレースか」の絞り込み</li>
-          <li>フォーカス（1頭を選ぶと、その馬と他の馬との対戦歴と先着成績だけを表示します）</li>
+          <li>フォーカス（1頭を選ぶと、その馬と他の馬との対戦歴だけを表示します）</li>
         </ul>
         <p class="hint" style="margin-top:6px">※頭数の上限はありません（あまり多いと共有用画像が大きくなりすぎる場合があります）。</p>
       </details>
@@ -2010,27 +2010,11 @@
       return { win, lose, tie, unknown };
     }
 
-    // 先着回数を出す場面：
-    //   "pair"  … 表の馬が2頭（2頭だけ入力・ペア表のマス・フォーカス相手が1頭）→ 先着回数
-    //   "focus" … フォーカス中で相手が2頭以上 → 相手ごとの先着成績
-    //   null    … 全体比較（3頭以上）では出さない
+    // 先着回数は表の馬が2頭のときだけ（フォーカス中・3頭以上の全体比較では出さない）
     function getAheadInfo(races, indexes, focusIndex) {
-      if (indexes.length === 2) {
-        const [a, b] = indexes;
-        return { type: "pair", a, b, ...countAhead(races, a, b) };
-      }
-      if (focusIndex !== null) {
-        const perHorse = new Map();
-        indexes.forEach(i => {
-          if (i !== focusIndex) perHorse.set(i, countAhead(races, focusIndex, i));
-        });
-        return { type: "focus", focus: focusIndex, perHorse };
-      }
-      return null;
-    }
-
-    function formatWinLose(result) {
-      return `${result.win}勝${result.lose}敗${result.tie ? `（同着${result.tie}）` : ""}`;
+      if (focusIndex !== null || indexes.length !== 2) return null;
+      const [a, b] = indexes;
+      return { a, b, ...countAhead(races, a, b) };
     }
 
     // 結果の枠の外（いちばん下）に出す先着回数。共有用画像には入れない
@@ -2038,37 +2022,20 @@
       if (!info) return "";
       const name = (i) => escapeHtml(state.horses[i].name);
 
-      if (info.type === "pair") {
-        return `
-          <section class="stats">
-            <div class="stats-title">先着回数</div>
-            <div><span class="stats-name">${name(info.a)}</span>　${info.win}回</div>
-            <div><span class="stats-name">${name(info.b)}</span>　${info.lose}回</div>
-            ${info.tie ? `<div>同着　${info.tie}回</div>` : ""}
-            ${info.unknown ? `<div class="hint">※中止・取消など判定できないレース：${info.unknown}件</div>` : ""}
-          </section>
-        `;
-      }
-
-      let unknown = 0;
-      const rows = [...info.perHorse].map(([i, result]) => {
-        unknown += result.unknown;
-        return `<div>vs <span class="stats-name">${name(i)}</span>　${formatWinLose(result)}</div>`;
-      }).join("");
       return `
         <section class="stats">
-          <div class="stats-title">${name(info.focus)}の先着成績</div>
-          ${rows}
-          ${unknown ? `<div class="hint">※中止・取消など判定できないレース：のべ${unknown}件</div>` : ""}
+          <div class="stats-title">先着回数</div>
+          <div><span class="stats-name">${name(info.a)}</span>　${info.win}回</div>
+          <div><span class="stats-name">${name(info.b)}</span>　${info.lose}回</div>
+          ${info.tie ? `<div>同着　${info.tie}回</div>` : ""}
+          ${info.unknown ? `<div class="hint">※中止・取消など判定できないレース：${info.unknown}件</div>` : ""}
         </section>
       `;
     }
 
     // CSV用：列ごとの文字列
     function aheadCellText(info, i) {
-      if (info.type === "pair") return `${i === info.a ? info.win : info.lose}回`;
-      if (i === info.focus) return "—";
-      return formatWinLose(info.perHorse.get(i));
+      return `${i === info.a ? info.win : info.lose}回`;
     }
 
     function countHeadline(selectedCount) {
@@ -2362,8 +2329,7 @@
       });
 
       if (ahead) {
-        const label = ahead.type === "focus" ? `先着成績（${state.horses[ahead.focus].name}から見て）` : "先着回数";
-        const row = ["", "", "", label];
+        const row = ["", "", "", "先着回数"];
         indexes.forEach(i => {
           row.push(aheadCellText(ahead, i));
           if (shareShowPopularity) row.push("");
